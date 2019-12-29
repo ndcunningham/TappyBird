@@ -8,6 +8,30 @@ let frames = 0;
 const sprite = new Image();
 sprite.src = './images/sprite.png';
 
+const state = {
+  current: 0,
+  ready: 0,
+  play: 1,
+  over: 2
+};
+
+// GAME CONTROL
+canvas.addEventListener('click', function(event) {
+  switch (state.current) {
+    case state.ready:
+      state.current = state.play;
+      break;
+
+    case state.play:
+      flapper.flap();
+      break;
+
+    case state.over:
+      state.current = state.ready;
+      break;
+  }
+});
+
 // background
 const bg = {
   sX: 0,
@@ -106,6 +130,10 @@ const flapper = {
   h: 26,
 
   frame: 0,
+  period: 0,
+  speed: 0,
+  gravity: 0.25,
+  jump: 4.6,
 
   draw: function() {
     const bird = this.animation[this.frame];
@@ -121,6 +149,36 @@ const flapper = {
       this.w,
       this.h
     );
+  },
+
+  flap: function() {
+    this.speed = -this.jump;
+  },
+
+  updateFlapper: function() {
+    // IF we are on the ready screen the bird should flap slower
+    this.period = state.current == state.ready ? 10 : 5;
+
+    // We increment the frame by 1 for each period
+    this.frame += frames % this.period == 0 ? 1 : 0;
+
+    // safeguard to only animate over the length of the animations
+    this.frame = this.frame % this.animation.length;
+
+    if (state.current == state.ready) {
+      this.y = 150; // reset the position of the bird after game over
+    } else {
+      this.speed += this.gravity;
+      this.y += this.speed;
+
+      if (this.y + this.h / 2 >= canvas.height - fg.h) {
+        this.y = canvas.height - fg.h - this.h / 2;
+
+        if (state.current == state.play) {
+          state.current = state.over;
+        }
+      }
+    }
   }
 };
 
@@ -135,17 +193,19 @@ const getReady = {
   y: 80,
 
   draw: function() {
-    ctx.drawImage(
-      sprite,
-      this.sX,
-      this.sY,
-      this.w,
-      this.h,
-      this.x,
-      this.y,
-      this.w,
-      this.h
-    );
+    if (state.current == state.ready) {
+      ctx.drawImage(
+        sprite,
+        this.sX,
+        this.sY,
+        this.w,
+        this.h,
+        this.x,
+        this.y,
+        this.w,
+        this.h
+      );
+    }
   }
 };
 
@@ -159,19 +219,22 @@ const gameOver = {
   y: 90,
 
   draw: function() {
-    ctx.drawImage(
-      sprite,
-      this.sX,
-      this.sY,
-      this.w,
-      this.h,
-      this.x,
-      this.y,
-      this.w,
-      this.h
-    );
+    if (state.current == state.over) {
+      ctx.drawImage(
+        sprite,
+        this.sX,
+        this.sY,
+        this.w,
+        this.h,
+        this.x,
+        this.y,
+        this.w,
+        this.h
+      );
+    }
   }
 };
+
 function drawGame() {
   ctx.fillStyle = '#70c5ce';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -180,9 +243,12 @@ function drawGame() {
   fg.draw();
   flapper.draw();
   getReady.draw();
+  gameOver.draw();
 }
 
-function updateGame() {}
+function updateGame() {
+  flapper.updateFlapper();
+}
 
 function animatePerSecond() {
   updateGame();
