@@ -1,0 +1,28 @@
+{
+  "name": "tappybird",
+  "version": "1.0.0",
+  "description": "Flappy Bird game made using Typescript",
+  "main": "game.js",
+  "dependencies": {
+    "tslint": "^5.20.1",
+    "webpack-cli": "^3.3.10",
+    "webpack": "^4.41.5"
+  },
+  "devDependencies": {
+    "ts-loader": "^6.2.1",
+    "typescript": "^3.7.4"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ndcunningham/TappyBird.git"
+  },
+  "author": "Nicholas Cunningham",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ndcunningham/TappyBird/issues"
+  },
+  "homepage": "https://github.com/ndcunningham/TappyBird#readme"
+}
