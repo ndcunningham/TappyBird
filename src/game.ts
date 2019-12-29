@@ -8,11 +8,33 @@ let frames = 0;
 const sprite = new Image();
 sprite.src = './images/sprite.png';
 
+const POINT = new Audio();
+POINT.src = './audio/point.wav';
+
+const HIT = new Audio();
+HIT.src = './audio/hit.wav';
+
+const SWOOSH = new Audio();
+SWOOSH.src = './audio/swoosh.wav';
+
+const DIE = new Audio();
+DIE.src = './audio/die.wav';
+
+const WING = new Audio();
+WING.src = './audio/wing.wav';
+
 const state = {
   current: 0,
   ready: 0,
   play: 1,
   over: 2
+};
+
+const startBtn = {
+  x: 120,
+  y: 263,
+  w: 83,
+  h: 29
 };
 
 const DEGREE = Math.PI / 180;
@@ -22,14 +44,29 @@ canvas.addEventListener('click', function(event) {
   switch (state.current) {
     case state.ready:
       state.current = state.play;
+      SWOOSH.play();
       break;
 
     case state.play:
       flapper.flap();
+      WING.play();
       break;
 
     case state.over:
-      state.current = state.ready;
+      let canvasRect = canvas.getBoundingClientRect();
+      let clickX = event.clientX - canvasRect.left;
+      let clickY = event.clientY - canvasRect.top;
+
+      // CHECK if the start button has actually been clicked
+      if (
+        clickX >= startBtn.x &&
+        clickX < startBtn.x + startBtn.w &&
+        clickY >= startBtn.y &&
+        clickY < startBtn.y + startBtn.h
+      ) {
+        resetBoard();
+        state.current = state.ready;
+      }
       break;
   }
 });
@@ -148,6 +185,7 @@ const flapper = {
   gravity: 0.25,
   jump: 4.6,
   rotation: 0,
+  radius: 12,
 
   draw: function() {
     const bird = this.animation[this.frame];
@@ -197,6 +235,7 @@ const flapper = {
 
         if (state.current == state.play) {
           state.current = state.over;
+          DIE.play();
         }
       }
 
@@ -208,6 +247,117 @@ const flapper = {
         this.rotation = -25 * DEGREE;
       }
     }
+  },
+
+  speedReset: function() {
+    this.speed = 0;
+  }
+};
+// #endregion
+
+// pipes
+// #region pipes
+
+const pipes = {
+  position: [],
+  top: {
+    sX: 553,
+    sY: 0
+  },
+
+  bottom: {
+    sX: 502,
+    sY: 0
+  },
+
+  w: 53,
+  h: 400,
+  gap: 85,
+  maxYPos: -150,
+  dx: 2,
+
+  draw: function() {
+    for (let index = 0; index < this.position.length; index++) {
+      let p = this.position[index];
+
+      let topYPos = p.y;
+      let bottomYPos = p.y + this.h + this.gap;
+
+      // top pipe
+      ctx.drawImage(
+        sprite,
+        this.top.sX,
+        this.top.sY,
+        this.w,
+        this.h,
+        p.x,
+        topYPos,
+        this.w,
+        this.h
+      );
+
+      // bottom pipe
+      ctx.drawImage(
+        sprite,
+        this.bottom.sX,
+        this.bottom.sY,
+        this.w,
+        this.h,
+        p.x,
+        bottomYPos,
+        this.w,
+        this.h
+      );
+    }
+  },
+
+  update: function() {
+    if (state.current !== state.play) return;
+
+    if (frames % 100 == 0) {
+      this.position.push({
+        x: canvas.width,
+        y: this.maxYPos * (Math.random() + 1)
+      });
+    }
+
+    for (let index = 0; index < this.position.length; index++) {
+      let p = this.position[index];
+
+      let bottomPipeYPos = p.y + this.h + this.gap;
+
+      // Collision detection
+      if (
+        flapper.x + flapper.radius > p.x &&
+        flapper.x - flapper.radius < p.x + this.w &&
+        [p.y, bottomPipeYPos].some(
+          yPos =>
+            flapper.y + flapper.radius > yPos &&
+            flapper.y - flapper.radius < yPos + this.h
+        )
+      ) {
+        state.current = state.over;
+        HIT.play();
+      }
+
+      // Move pipes to the left
+      p.x -= this.dx;
+
+      // if the pipes are outside of the canvas, we should remove them
+      if (p.x + this.w <= 0) {
+        this.position.shift();
+
+        score.value += 1;
+        POINT.play();
+        score.best = Math.max(score.best, score.value);
+
+        localStorage.setItem('best', `${score.best}`);
+      }
+    }
+  },
+
+  reset: function() {
+    this.position = [];
   }
 };
 // #endregion
@@ -268,20 +418,62 @@ const gameOver = {
 };
 // #endregion
 
+// score
+// #region score
+const score = {
+  value: 0,
+  best: parseInt(localStorage.getItem('best')) || 0,
+
+  draw: function() {
+    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = '#000';
+
+    if (state.current == state.play) {
+      ctx.lineWidth = 2;
+      ctx.font = '35px Teko';
+      ctx.fillText(this.value, canvas.width / 2, 50);
+      ctx.strokeText(this.value, canvas.width / 2, 50);
+    } else if (state.current == state.over) {
+      // score
+      ctx.font = '25px Teko';
+      ctx.fillText(this.value, 225, 186);
+      ctx.strokeText(this.value, 225, 186);
+
+      // best score
+      ctx.fillText(this.best, 225, 228);
+      ctx.strokeText(this.best, 225, 228);
+    }
+  },
+
+  reset: function() {
+    this.value = 0;
+  }
+};
+// #endregion
+
+// reset
+function resetBoard() {
+  pipes.reset();
+  flapper.speedReset();
+  score.reset();
+}
 function drawGame() {
   ctx.fillStyle = '#70c5ce';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   bg.draw();
+  pipes.draw();
   fg.draw();
   flapper.draw();
   ready.draw();
   gameOver.draw();
+  score.draw();
 }
 
 function updateGame() {
   flapper.updateFlapper();
   fg.update();
+  pipes.update();
 }
 
 function animatePerSecond() {
