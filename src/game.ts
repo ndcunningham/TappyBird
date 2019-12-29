@@ -15,6 +15,8 @@ const state = {
   over: 2
 };
 
+const DEGREE = Math.PI / 180;
+
 // GAME CONTROL
 canvas.addEventListener('click', function(event) {
   switch (state.current) {
@@ -33,6 +35,7 @@ canvas.addEventListener('click', function(event) {
 });
 
 // background
+// #region background
 const bg = {
   sX: 0,
   sY: 0,
@@ -67,9 +70,10 @@ const bg = {
     );
   }
 };
+// #endregion
 
 //foreground
-
+// #region foreground
 const fg = {
   sX: 276,
   sY: 0,
@@ -77,6 +81,7 @@ const fg = {
   h: 112,
   x: 0,
   y: canvas.height - 112,
+  dx: 2,
 
   draw: function() {
     ctx.drawImage(
@@ -102,9 +107,17 @@ const fg = {
       this.w,
       this.h
     );
+  },
+
+  update: function() {
+    if (state.current == state.play) {
+      this.x = (this.x - this.dx) % (this.w / 2);
+    }
   }
 };
+// #endregion
 
+// #region flapper
 const flapper = {
   animation: [
     {
@@ -134,9 +147,14 @@ const flapper = {
   speed: 0,
   gravity: 0.25,
   jump: 4.6,
+  rotation: 0,
 
   draw: function() {
     const bird = this.animation[this.frame];
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
 
     ctx.drawImage(
       sprite,
@@ -144,11 +162,13 @@ const flapper = {
       bird.sY,
       this.w,
       this.h,
-      this.x - this.w / 2,
-      this.y - this.h / 2,
+      -this.w / 2,
+      -this.h / 2,
       this.w,
       this.h
     );
+
+    ctx.restore();
   },
 
   flap: function() {
@@ -167,6 +187,7 @@ const flapper = {
 
     if (state.current == state.ready) {
       this.y = 150; // reset the position of the bird after game over
+      this.rotation = 0 * DEGREE;
     } else {
       this.speed += this.gravity;
       this.y += this.speed;
@@ -178,13 +199,22 @@ const flapper = {
           state.current = state.over;
         }
       }
+
+      // If the speed is greater than the jump, the bird is falling
+      if (this.speed >= this.jump) {
+        this.rotation = 90 * DEGREE;
+        this.frame = 1;
+      } else {
+        this.rotation = -25 * DEGREE;
+      }
     }
   }
 };
+// #endregion
 
 // ready message
-
-const getReady = {
+// #region ready
+const ready = {
   sX: 0,
   sY: 228,
   w: 173,
@@ -208,8 +238,10 @@ const getReady = {
     }
   }
 };
+// #endregion
 
 // game over
+// #region over
 const gameOver = {
   sX: 175,
   sY: 228,
@@ -234,6 +266,7 @@ const gameOver = {
     }
   }
 };
+// #endregion
 
 function drawGame() {
   ctx.fillStyle = '#70c5ce';
@@ -242,12 +275,13 @@ function drawGame() {
   bg.draw();
   fg.draw();
   flapper.draw();
-  getReady.draw();
+  ready.draw();
   gameOver.draw();
 }
 
 function updateGame() {
   flapper.updateFlapper();
+  fg.update();
 }
 
 function animatePerSecond() {
