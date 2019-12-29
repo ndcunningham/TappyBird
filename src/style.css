@@ -1,0 +1,14 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  padding: 20px;
+}
+
+.board {
+  border: 1px solid rgb(48, 47, 47);
+  display: block;
+  margin: 0 auto;
+}
